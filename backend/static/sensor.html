@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Dragon Controller</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script src="https://unpkg.com/chart.js@2.8.0/dist/Chart.bundle.js"></script>
+  <script src="https://unpkg.com/chartjs-gauge@0.3.0/dist/chartjs-gauge.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="/backend/staticd/static/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Dragon Controller</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li class="active"><a href="/sensors">Sensors</a></li>
+      <li><a href="/calc">Rechner</a></li>
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a href="#" id="reload"><span class="glyphicon glyphicon-refresh"></span> Refresh</a></li>
+      <li><a href="#"><span class="glyphicon glyphicon-user"></span> Sign Up</a></li>
+      <li><a href="#"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <h3>Temperature and Humidity</h3>
+  <div class="flex2">
+
+  <div class="panel panel-default">
+    <div class="panel-heading">Temperature</div>
+    <div class="panel-body">
+        <div id="canvas-holder">
+            <canvas id="chart"></canvas>
+        </div>
+   </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">Humidity</div>
+    <div class="panel-body">
+        <div id="canvas-holder2">
+            <canvas id="chart2"></canvas>
+        </div>
+   </div>
+  </div>
+  </div>
+</div>
+
+<script>
+var humidity = [20, 40, 55, 70, 100];
+var temp = [20, 40, 50, 100];
+
+
+function formatt_temp(input) {
+    return formatter(input).toString() + "°C";
+}
+
+function formatt_humid(input) {
+    return formatter(input).toString() + "%";
+}
+
+function formatter(input) {
+    return Math.round(input*10)/10
+}
+
+var config_humid = {
+  type: 'gauge',
+  data: {
+    labels: ['Alarm', 'Warning', 'OK', 'Alarm', 'OK'],
+    datasets: [{
+      data: humidity,
+      value: 0,
+      backgroundColor: ['#e57373', '#ffb74d', '#aed581', '#ffb74d', '#e57373'],
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    title: {
+      display: false,
+      text: 'Gauge chart'
+    },
+    needle: {
+      radiusPercentage: 0,
+      widthPercentage: 2,
+      lengthPercentage: 60,
+      color: 'rgba(0, 0, 0, 1)'
+    },
+    valueLabel: {
+      formatter: formatt_humid,
+      fontSize: 20
+    }
+  }
+};
+var config_temp = {
+  type: 'gauge',
+  data: {
+    labels: ['Alarm', 'Warning', 'OK', 'Alarm'],
+    datasets: [{
+      data: temp,
+      value: 0,
+      backgroundColor: ['#e57373', '#ffb74d', '#aed581', '#e57373'],
+      borderWidth: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    needle: {
+      radiusPercentage: 0,
+      widthPercentage: 2,
+      lengthPercentage: 60,
+      color: 'rgba(0, 0, 0, 1)'
+    },
+    valueLabel: {
+      formatter: formatt_temp,
+      fontSize: 20
+    }
+  }
+};
+
+
+
+function update() {
+    $.get("/api/humidity/0", function(data, status){
+      if(status === "success"){
+        config_humid.data.datasets.forEach(function (dataset) {
+            dataset.value = data;
+        })
+      }
+    });
+    $.get("/api/temperature/0", function(data, status){
+      if(status === "success"){
+        config_temp.data.datasets.forEach(function (dataset) {
+            dataset.value = data;
+        })
+      }
+    });
+
+    window.tempGauge.update();
+    window.humidGauge.update();
+}
+
+window.onload = function() {
+  var ctx_temp = document.getElementById('chart').getContext('2d');
+  var ctx_humid = document.getElementById('chart2').getContext('2d');
+  window.tempGauge = new Chart(ctx_temp, config_temp);
+  window.humidGauge = new Chart(ctx_humid, config_humid);
+  update();
+};
+
+document.getElementById('reload').addEventListener("click", update);
+setInterval(update, 5000);
+
+
+</script>
+</body>
+</html>

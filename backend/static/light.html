@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<head>
+  <title>Dragon Controller</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script src="https://unpkg.com/chart.js@2.8.0/dist/Chart.bundle.js"></script>
+  <script src="https://unpkg.com/chartjs-gauge@0.3.0/dist/chartjs-gauge.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+  <link rel="stylesheet" href="coloris.css" />
+  <script src="coloris.js"></script>
+  <link rel="stylesheet" href="/backend/staticd/static/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Dragon Controller</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="/sensors">Sensors</a></li>
+      <li><a href="/calc">Rechner</a></li>
+      <li class="active"><a href="#">Licht</a></li>
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+      <li><a id="reload"><span class="glyphicon glyphicon-refresh"></span> Refresh</a></li>
+      <li><a href="#"><span class="glyphicon glyphicon-user"></span> Sign Up</a></li>
+      <li><a href="#"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+    <h3>Licht Kontrolle</h3>
+    <button id='add_button' class="btn btn-info nospace">Add Dimpoint</button>
+    <table class="table table-bordered" id="light_table">
+  <thead class="thead-dark">
+    <tr>
+      <th style="width: 50px" scope="col">Hour</th>
+      <th scope="col">Minute</th>
+      <th scope="col">Intensity</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody id="light-table-body" class="table-hover">
+  </tbody>
+</table>
+
+</div>
+
+
+<style>
+    .btn {
+        margin: 1%;
+        width: 48%;
+        min-width: 100px;
+    }
+
+    .table-row > td > input {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    td {
+        width: 11%;
+    }
+    .nospace {
+        padding-left: 0;
+        margin-left: 0;
+        width: 100%;
+    }
+
+</style>
+
+<script>
+    var testdata = [
+  {
+    "hour": 8,
+    "minute": 30,
+    "percent": 10
+  },
+  {
+    "hour": 9,
+    "minute": 30,
+    "percent": 70
+  },
+  {
+    "hour": 17,
+    "minute": 0,
+    "percent": 20
+  },
+  {
+    "hour": 18,
+    "minute": 30,
+    "percent": 10
+  },
+  {
+    "hour": 20,
+    "minute": 0,
+    "percent": 0
+  }
+];
+    function addDimpoint(event) {
+        if (!inEdit) {
+            var tbody = document.getElementById('light-table-body');
+            next_row_count = tbody.childNodes.length - 1;
+            console.log(next_row_count);
+            tbody.appendChild(createInputRow(next_row_count));
+            inEdit = true;
+        }
+
+    }
+
+    function createEditButton() {
+        const edit_button = document.createElement('button');
+        edit_button.classList.add('btn');
+        edit_button.classList.add('btn-warning');
+        edit_button.classList.add('edit-btn');
+        edit_button.innerText = 'Edit';
+        edit_button.addEventListener('click', editRow)
+
+        return edit_button;
+    }
+
+    function createDeleteButton() {
+        const delete_button = document.createElement('button');
+        delete_button.classList.add('btn');
+        delete_button.classList.add('btn-danger');
+        delete_button.classList.add('delete-btn');
+        delete_button.innerText = 'Delete';
+        delete_button.addEventListener('click', deleteRow)
+
+        return delete_button;
+    }
+
+    function createEditDeleteButton() {
+        const delete_button = document.createElement('button');
+        delete_button.classList.add('btn');
+        delete_button.classList.add('btn-danger');
+        delete_button.classList.add('delete-btn');
+        delete_button.innerText = 'Delete';
+        delete_button.addEventListener('click', deleteRow)
+
+        const edit_button = document.createElement('button');
+        edit_button.classList.add('btn');
+        edit_button.classList.add('btn-warning');
+        edit_button.classList.add('edit-btn');
+        edit_button.innerText = 'Edit';
+        edit_button.addEventListener('click', editRow)
+
+        const actions = document.createElement("td");
+        actions.appendChild(delete_button);
+        actions.appendChild(edit_button);
+
+        return actions;
+    }
+
+    function saveRow(event){
+        var tr = event.target.parentElement.parentElement;
+        for (var i = 0; i < 3; i++){
+            td = tr.childNodes[i];
+            input = td.childNodes[0];
+            td.innerHTML = input.value;
+        }
+        tr.childNodes[3].innerHTML = '';
+        tr.childNodes[3].appendChild(createDeleteButton());
+        tr.childNodes[3].appendChild(createEditButton());
+        inEdit = false;
+    }
+
+    function createSaveButton() {
+        button = document.createElement('button');
+        button.innerText = 'Save';
+        button.classList.add('btn');
+        button.classList.add('btn-warning');
+        button.addEventListener('click', saveRow);
+
+        return button;
+    }
+
+    function createInputs() {
+        inputs = [];
+        for (var i = 0; i < 3; i++){
+                input = document.createElement("input");
+                input.type = 'number';
+                input.min = 0;
+                if (i == 0) {
+                    input.max = 23;
+                } else if (i == 1) {
+                    input.max = 59;
+                } else {
+                    input.max = 100;
+                }
+                inputs.push(input);
+            }
+        return inputs;
+    }
+
+    function editRow(event){
+        if (!inEdit){
+            inEdit = true;
+            tr = event.target.parentElement.parentElement
+            for (var i = 0; i < 3; i++){
+                td = tr.childNodes[i];
+                input = document.createElement("input");
+                input.value = td.innerText;
+                input.type = 'number';
+                input.min = 0;
+                if (i == 0) {
+                    input.max = 23;
+                } else if (i == 1) {
+                    input.max = 59;
+                } else {
+                    input.max = 100;
+                }
+                td.innerHTML = '';
+                td.appendChild(input);
+            }
+            tr.childNodes[3].innerHTML = '';
+
+            tr.childNodes[3].appendChild(createSaveButton());
+        }
+    }
+    function deleteRow(event){
+        var tr = event.target.parentElement.parentElement.remove()
+    }
+    function createRow(hour, minute, intensity, row) {
+        const tr = document.createElement("tr");
+        tr.classList.add('row-'+row);
+        tr.classList.add('table-row');
+        tr.classList.add('table-hover');
+
+        const hour_td = document.createElement("td");
+        hour_td.innerText = hour;
+
+        const minute_td = document.createElement("td");
+        minute_td.innerText = minute;
+
+        const intensity_td = document.createElement("td");
+        intensity_td.innerText = intensity;
+
+        [hour_td, minute_td, intensity_td, createEditDeleteButton()].forEach(element => tr.appendChild(element));
+        return tr;
+    }
+
+    function createInputRow(row) {
+        const tr = document.createElement("tr");
+        tr.classList.add('row-'+row);
+        tr.classList.add('table-row');
+        tr.classList.add('table-hover');
+
+        inputs = createInputs();
+
+        const hour_td = document.createElement("td");
+        hour_td.appendChild(inputs[0]);
+
+        const minute_td = document.createElement("td");
+        minute_td.appendChild(inputs[1]);
+
+        const intensity_td = document.createElement("td");
+        intensity_td.appendChild(inputs[2]);
+
+        const action_td = document.createElement("td");
+        action_td.appendChild(createSaveButton());
+
+
+        [hour_td, minute_td, intensity_td, action_td].forEach(element => tr.appendChild(element));
+        return tr;
+    }
+
+    inEdit = false;
+
+    document.getElementById('add_button').addEventListener('click', addDimpoint);
+    data = testdata;
+    table = document.getElementById('light_table')
+    tbody = document.getElementById('light-table-body')
+    for(var i = 0; i < testdata.length; i++){
+        const row = createRow(data[i].hour, data[i].minute, data[i].percent, i);
+        tbody.appendChild(row);
+    }
+</script>
+
+
+</body>
+</html>
